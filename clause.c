@@ -31,6 +31,7 @@ status destroyCNF(CNF *cnf)
     deleteAllClause(cnf);
     free(cnf->boolarray);
     free(cnf->floorarray);
+    free(cnf->countarray);
     free(cnf);
     return OK;
 }

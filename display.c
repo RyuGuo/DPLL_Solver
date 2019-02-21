@@ -5,7 +5,8 @@
 #define DEBUG 1
 
 char path1[]="C:\\Users\\hasee\\Desktop\\程序设计综合课程设计任务及指导学生包\\SAT测试备选算例\\满足算例\\M\\bart17.shuffled-231.cnf";
-
+//char path1[]="C:\\Users\\hasee\\Desktop\\程序设计综合课程设计任务及指导学生包\\SAT测试备选算例\\不满足算例\\u-problem10-100.cnf";
+//char path1[]="C:\\Users\\hasee\\Desktop\\test.cnf";
 
 void CNFPage()
 {

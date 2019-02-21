@@ -2,6 +2,13 @@
 
 #define DEBUG2 0
 
+#define VSIDS 3
+#define VSIDSCOUNT 10
+#define MAXC 8
+#define LEARNLENGTH_MAX 20
+
+status reset=FALSE;
+
 //boolean DPLLRec(CNF *cnf,const int f)
 //{
 //    /* S为公式对应的子句集。若其满足，返回TURE；否则返回FALSE. */
@@ -181,13 +188,29 @@ boolean DPLLRec(CNF *cnf,const int f)
 {
     /* S为公式对应的子句集。若其满足，返回TURE；否则返回FALSE. */
     int s,l;
+    int count=0;
     int ret=f;//回溯层数
     ClauseList *Cp;
     ChangeStack st;
     st.floor=f;
     st.next=NULL;
     do{
-        //printf("递归:%d, 选%d\n",f,cnf->root->head->literal);
+        count++;
+        if(reset==TRUE){
+            reset=FALSE;
+            /*如果重启动，可以把那些没有移除变元的、很长的学习子句删除*/
+            LearnClauseList *lcp=cnf->learn_root,*lcq=NULL;
+            while(lcp){
+                if(lcp->clause->rmv==NULL && lcp->clause->length>LEARNLENGTH_MAX){
+                    lcq=lcp->next;
+                    deleteLearnClause(cnf,lcp);
+                    lcp=lcq;
+                }
+                else{
+                    lcp=lcp->next;
+                }
+            }
+        }
         #if DEBUG2
         //
         //printf("化简前\n");
@@ -205,10 +228,10 @@ boolean DPLLRec(CNF *cnf,const int f)
                 int *a=(int*)malloc(sizeof(int)*cnf->literals);
                 reduceChange(cnf, &st,-1, a);//还原到初始集
                 /*如果取值不成立，可能要添加学习子句并非时序回溯...*/
-                ret=createLearnClause(cnf,a+1,a[0]);
+                ret=createLearnClause(cnf,a+1,a[0],a[a[0]+1]);
                 free(a);
                 backLearnClause(cnf,f);
-                deleteRepeatLearnClause(cnf, cnf->learn_root);
+                //deleteRepeatLearnClause(cnf, cnf->learn_root);
                 #if DEBUG2
                 //getchar();
                 printf("跳至%d\n",ret);
@@ -218,6 +241,12 @@ boolean DPLLRec(CNF *cnf,const int f)
                 #endif // DEBUG
                 //赋值回溯
                 backAssign(cnf,f);
+                if(count>MAXC){
+                    printf("重启动...\n");
+                    reset=TRUE;
+                    //学习子句的回溯
+                    return 0-f;
+                }
                 #if DEBUG2
                 {
                     printf("回跳\n");
@@ -245,6 +274,7 @@ boolean DPLLRec(CNF *cnf,const int f)
         /* VSIDS */
         addClause(cnf,1,&l);
         saveChange(&st,SPLIT,cnf->root,NULL);//保存插入操作
+        printf("递归:%d, 选%d\n",f,l);
         s=DPLLRec(cnf,f+1);
         reduceChange(cnf,&st,1,NULL);
     }while(s==FALSE);
@@ -338,7 +368,8 @@ status simplySingleClause(CNF *cnf, int literal, ChangeStack *head)
             //如果为空语句,把空语句置顶返回
             //如果为单语句,置顶
             //如果为双语句,置顶
-            if(Cp->length<=2){
+            //上述不需要
+            /*if(Cp->length<=2){
                 Cq=Cp->next;
                 removeClause(cnf,Cp);
                 insertClauseTop(cnf,Cp);
@@ -351,7 +382,8 @@ status simplySingleClause(CNF *cnf, int literal, ChangeStack *head)
             }
             else{
                 Cp=Cp->next;
-            }
+            }*/
+            Cp=Cp->next;
             //Lp->next=NULL;
             //printClause(cnf);
             break;
@@ -460,12 +492,13 @@ int VSIDSStrategy(CNF *cnf)
         }
     }
     count++;
-    if(count>10){
+    if(count>VSIDSCOUNT){
         count=0;
         for(i=1;i<=cnf->literals;i++){
-            cnf->countarray[i]/=3;
+            cnf->countarray[i]/=VSIDS;
         }
     }
+    index=(count%2)?index:-index;
     return index;
 }
 int combineStrategy(CNF *cnf)
@@ -476,7 +509,7 @@ int combineStrategy(CNF *cnf)
         return index;
     }
     return chooseStrategy_MaxOccurrence(cnf);*/
-    //return VSIDSStrategy(cnf);
+    return VSIDSStrategy(cnf);
     return cnf->root->head->literal;
 }
 status saveChange(ChangeStack *head, int tag, ClauseList* Cp, LiteralNode *Lp)
@@ -511,7 +544,7 @@ status saveChange(ChangeStack *head, int tag, ClauseList* Cp, LiteralNode *Lp)
 }
 status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
 {
-    //learnarray组成:第一个元素为长度，第二个开始是变元
+    //learnarray组成:第0个元素为长度，第1个开始是变元,第i+1个为唯一蕴含点
     //学习子句计划
     //加入a[]:变元x在当前层的赋值状态X=boolarray[x]*x加入a[]
     //第一次撤销肯定是冲突的子句C变空，所以第一次撤销后该子句C的DIVIDE后的所有变元都加入a[]
@@ -532,8 +565,12 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
 
     //6.插入学习子句Cl => a[]得到最后蕴含关系
     int i=1,j;
+    int toF=head->floor;
+    status *a=NULL;
     LiteralNode *Lp;
     ChangeStack *Sp=head->next;
+    status flag=FALSE;
+    status isLearn=FALSE;
     while(Sp && time!=0){
         //PrintChangeStack(head);
         switch(Sp->tag)
@@ -545,9 +582,11 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
             //子句变元遵循规律：DIVIDE后的变元决策层为降序
             //撤销本层的变元删除操作只需要将本决策层的变元放在DIVIDE前即可
             backLiteral(Sp->Cp,Sp->Lp);
-            if(learnarray){
+            if(learnarray && flag==FALSE){
                 //将冲突的变元加入a[]_0
                 if(Sp->Cp->length==1){
+                    flag=TRUE;
+                    a=(status*)malloc(sizeof(status)*cnf->literals+1);
                     learnarray[i]=Sp->Cp->head->literal;
                     i++;
                     learnarray[i]=0-Sp->Cp->head->literal;
@@ -565,41 +604,57 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
             break;
         }
 
-        if(learnarray){
-            #if DEBUG2
-//            printf("子句：");
-//            for(Lp=Sp->Cp->head;Lp;Lp=Lp->next){
-//                printf("%d ",Lp->literal);
-//            }
-//            printf("\n");
-            #endif // DEBUG2
+        if(learnarray && isLearn==FALSE){
 
             if(Sp->Cp->length==1){
+                //是否元素在a[]_0内（元素的值取反后与a[]_0比较）
                 for(j=1;j<i;j++){
                     if(Sp->Cp->head->literal==-learnarray[j]){
                         break;
                     }
                 }
-                //且元素在a[]_0内（元素的值取反后与a[]_0比较），该子句C的DIVIDE后的所有变元都加入a[]_0
+                //该子句C的DIVIDE后的所有变元都加入a[]_0
                 if(i!=j){
-                    for(Lp=Sp->Cp->rmv;Lp;Lp=Lp->next){
-                        //删去重复的变元
-                        for(j=1;j<i;j++){
-                            if(learnarray[j]==Lp->literal){
-                                break;
-                            }
-                        }
-                        if(j==i){
-                            learnarray[i]=Lp->literal;
-                            i++;
+                    //访问该顶点
+                    a[j]=TRUE;
+                    int t=j;
+                    //是否全部访问过
+                    for(j=2;j<i;j++){
+                        if(a[j]!=TRUE){
+                            break;
                         }
                     }
+                    if(j==i && i!=3 && isLearn==FALSE){
+                        isLearn=TRUE;
+                        learnarray[0]=i-1;
+                        learnarray[i]=-learnarray[t];
+                    }
+                    else{
+
+                        //printf("子句%p, %d: ",Sp->Cp,Sp->Cp->head->literal);
+
+                        for(Lp=Sp->Cp->rmv;Lp;Lp=Lp->next){
+
+                            //printf("%d ",Lp->literal);
+                            //删去重复的变元
+                            for(j=1;j<i;j++){
+                                if(learnarray[j]==Lp->literal){
+                                    break;
+                                }
+                            }
+                            if(j==i){
+                                learnarray[i]=Lp->literal;
+                                a[i]=FALSE;
+                                if(cnf->floorarray[ABS(learnarray[i])]<head->floor){
+                                    a[i]=TRUE;
+                                }
+                                i++;
+                            }
+                        }
+                    }
+                    //printf("\n");
                 }
                 //如果是过长的学习子句，那么先加入a[]，再删除（不可行,因为会产生短的但是隐含前提错误的子句）
-                /*if(Sp->tag==CLAUSE && Sp->Cp->lcp && Sp->Cp->lcp->countNum>LEARNLENGTH_MAX){
-                    printf("删除%p\n",Sp->Cp);
-                    deleteLearnClause(cnf,Sp->Cp->lcp);
-                }*/
             }
         }
         time--;
@@ -608,17 +663,20 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
         Sp=head->next;
     }
     if(learnarray){
-        learnarray[0]=i-1;
+        free(a);
     }
     return OK;
 }
-int createLearnClause(CNF *cnf, int *a, int i)
+int createLearnClause(CNF *cnf, int *a, int i, int X)
 {
     int j,l;
-    int X=cnf->root->head->literal;
+    int *copy=(int*)malloc(sizeof(int)*i);
+    for(j=0;j<i;j++){
+        copy[j]=a[j];
+    }
     int F=0,toF=0;
-    #if DEBUG2
-    printf("学习前a=");
+
+    /*printf("学习前a=");
     for(j=0;j<i;j++){
         printf("%d ",a[j]);
     }
@@ -627,25 +685,25 @@ int createLearnClause(CNF *cnf, int *a, int i)
     for(j=1;j<=cnf->literals;j++){
         printf("%d:%d ",j,cnf->floorarray[j]*cnf->boolarray[j]);
     }
-    printf("\n");
-    #endif // DEBUG2
+    printf("\n");*/
+
     //由后往前减少赋值次数
     for(j=i-1;j>=0;j--){
-        if(F<cnf->floorarray[ABS(a[j])]){
-            F=cnf->floorarray[ABS(a[j])];
+        if(F<cnf->floorarray[ABS(copy[j])]){
+            F=cnf->floorarray[ABS(copy[j])];
         }
     }
     //3.将所有撤销完成后，得到a[]_1，删去a[]_1中本层所有的变量赋值（决策以及推倒出）的变元，得到a[]_2
     for(l=0,j=0;j<i;j++){
-        if(cnf->floorarray[ABS(a[j])]!=F && cnf->floorarray[ABS(a[j])]!=-1){
-            a[l]=a[j];
+        if(cnf->floorarray[ABS(copy[j])]!=F && cnf->floorarray[ABS(copy[j])]!=-1){
+            copy[l]=copy[j];
             l++;
         }
     }
     //4.得到需要返回的决策层，即a[]_2中变元i的floorarray[i]的最大值toF
     for(j=0;j<l;j++){
-        if(toF<cnf->floorarray[ABS(a[j])]){
-            toF=cnf->floorarray[ABS(a[j])];
+        if(toF<cnf->floorarray[ABS(copy[j])]){
+            toF=cnf->floorarray[ABS(copy[j])];
         }
     }
     // **如果学习子句长度过长，只生成决策单子句，在回溯的时候将其删除
@@ -658,24 +716,24 @@ int createLearnClause(CNF *cnf, int *a, int i)
     //插入排序
     for(i=1;i<l;i++){
         for(j=i-1;j>=0;j--){
-            if(cnf->floorarray[ABS(a[j+1])]>cnf->floorarray[ABS(a[j])]){
-                int tmp=a[j+1];
-                a[j+1]=a[j];
-                a[j]=tmp;
+            if(cnf->floorarray[ABS(copy[j+1])]>cnf->floorarray[ABS(copy[j])]){
+                int tmp=copy[j+1];
+                copy[j+1]=copy[j];
+                copy[j]=tmp;
             }
         }
     }
     //5.加入本层的决策X得到a[]
-    a[l]=-X;
+    copy[l]=-X;
     l++;
     for(j=l-1;j>0;j--){
-        int tmp=a[j-1];
-        a[j-1]=a[j];
-        a[j]=tmp;
+        int tmp=copy[j-1];
+        copy[j-1]=copy[j];
+        copy[j]=tmp;
     }
 
     //6.插入学习子句Cl => a[]得到最后蕴含关系
-    addClause(cnf,l,a);
+    addClause(cnf,l,copy);
 
     LearnClauseList *lcp=(LearnClauseList*)malloc(sizeof(LearnClauseList));
     lcp->isInStack=FALSE;
@@ -688,13 +746,14 @@ int createLearnClause(CNF *cnf, int *a, int i)
     while(cnf->root->head){
         removeLiteral(cnf->root,cnf->root->head->literal);
     }
-    #if DEBUG2
+/*
     printf("学习%p a = ",cnf->root);
     for(j=0;j<l;j++){
-        printf("%d,%d ",a[j],cnf->floorarray[ABS(a[j])]);
+        printf("%d,%d ",copy[j],cnf->floorarray[ABS(copy[j])]);
     }
     printf("L=%d\n",L);
-    #endif // DEBUG2
+*/
+    free(copy);
     return toF;
 }
 status backLearnClause(CNF *cnf, int floor)

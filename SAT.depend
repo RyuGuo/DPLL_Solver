@@ -13,13 +13,13 @@
 1548830885 c:\users\hasee\desktop\sat\cnffile.h
 	"clause.h"
 
-1550565118 source:c:\users\hasee\desktop\sat\clause.c
+1550644856 source:c:\users\hasee\desktop\sat\clause.c
 	"clause.h"
 
-1550565522 source:c:\users\hasee\desktop\sat\dpll.c
+1550717942 source:c:\users\hasee\desktop\sat\dpll.c
 	"DPLL.h"
 
-1550564677 c:\users\hasee\desktop\sat\dpll.h
+1550709319 c:\users\hasee\desktop\sat\dpll.h
 	"clause.h"
 
 1550491021 source:c:\users\hasee\desktop\sat\sudoku.c
@@ -38,7 +38,7 @@
 	"DPLL.h"
 	"sudoku.h"
 
-1550565587 source:c:\users\hasee\desktop\sat\display.c
+1550715202 source:c:\users\hasee\desktop\sat\display.c
 	"display.h"
 	<io.h>
 	<string.h>

@@ -3,8 +3,6 @@
 
 #include "clause.h"
 
-#define LEARNLENGTH_MAX 50
-
 #define CLAUSE 0
 #define LITERAL 1
 #define SPLIT 2
@@ -31,7 +29,7 @@ status saveChange();//保存化简时的修改
 status reduceChange();//恢复修改
 status checkRes();//检查答案
 status PrintChangeStack();//打印栈
-int createLearnClause(CNF *cnf, int *a, int i);//生成学习子句
+int createLearnClause(CNF *cnf, int *a, int i, int X);//生成学习子句
 status backLearnClause(CNF *cnf, int floor);//学习子句的回溯
 status deleteRepeatLearnClause();//删去重复的学习子句
 status backAssign(CNF *cnf, int floor);////赋值回溯
