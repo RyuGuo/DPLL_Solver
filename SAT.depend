@@ -1,45 +1,45 @@
 # depslib dependency file v1.0
-1550232787 source:c:\users\hasee\desktop\sat\cnffile.c
+1551150190 source:c:\users\hasee\desktop\sat\cnffile.c
 	"cnfFile.h"
 
-1550565100 c:\users\hasee\desktop\sat\clause.h
+1551257479 c:\users\hasee\desktop\sat\clause.h
 	<stdio.h>
 	<stdlib.h>
 
-1548647359 source:c:\users\hasee\desktop\sat\main.c
-	<stdio.h>
+1551093004 source:c:\users\hasee\desktop\sat\main.c
 	"display.h"
 
 1548830885 c:\users\hasee\desktop\sat\cnffile.h
 	"clause.h"
 
-1550644856 source:c:\users\hasee\desktop\sat\clause.c
+1551257501 source:c:\users\hasee\desktop\sat\clause.c
 	"clause.h"
 
-1550717942 source:c:\users\hasee\desktop\sat\dpll.c
+1551259238 source:c:\users\hasee\desktop\sat\dpll.c
 	"DPLL.h"
+	<time.h>
 
-1550709319 c:\users\hasee\desktop\sat\dpll.h
+1551258890 c:\users\hasee\desktop\sat\dpll.h
 	"clause.h"
+	<math.h>
 
-1550491021 source:c:\users\hasee\desktop\sat\sudoku.c
-	<stdio.h>
-	<stdlib.h>
+1551254052 source:c:\users\hasee\desktop\sat\sudoku.c
 	"sudoku.h"
-	"time.h"
+	"DPLL.h"
 
 1548830908 c:\users\hasee\desktop\sat\sudoku.h
 	"clause.h"
 
-1548647038 c:\users\hasee\desktop\sat\display.h
+1551093072 c:\users\hasee\desktop\sat\display.h
 	<stdio.h>
+	<stdlib.h>
 	<time.h>
 	"cnfFile.h"
 	"DPLL.h"
 	"sudoku.h"
-
-1550715202 source:c:\users\hasee\desktop\sat\display.c
-	"display.h"
 	<io.h>
 	<string.h>
+
+1551254257 source:c:\users\hasee\desktop\sat\display.c
+	"display.h"
 

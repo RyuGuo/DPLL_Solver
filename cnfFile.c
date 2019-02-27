@@ -63,14 +63,6 @@ status saveRes(char *respath, status DPLL, CNF *cnf, int time)
     if(!fp){
         return ERROR;
     }
-    if(DPLL==TRUE){
-        for(i=1;i<=cnf->literals;i++){
-            if(cnf->boolarray[i]==0){
-                DPLL=-1;
-                break;
-            }
-        }
-    }
     fprintf(fp,"s %d\n",DPLL);
     fprintf(fp,"v");
     for(i=1;i<=cnf->literals;i++){

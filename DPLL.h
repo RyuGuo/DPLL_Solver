@@ -2,6 +2,7 @@
 #define DPLL_H_INCLUDED
 
 #include "clause.h"
+#include <math.h>
 
 #define CLAUSE 0
 #define LITERAL 1
@@ -20,10 +21,13 @@ boolean DPLLRec2();//递归2
 boolean DPLLUnRec();//非递归
 
 status simplySingleClause();//化简单子句
+status simplifySingleClause_2();
 status simplifyClause();//化简子句
 int chooseStrategy_MaxOccurrence();//策略_出现次数最多
 int chooseStrategy_MaxOccurrenceTwoLiteral();//选取出现在只有2个变元的子句中次数最多的变元
+int MOMStrategy(CNF *cnf);
 int VSIDSStrategy(CNF *cnf);
+int daoStrategy(CNF *cnf);
 int combineStrategy();//综合策略
 status saveChange();//保存化简时的修改
 status reduceChange();//恢复修改

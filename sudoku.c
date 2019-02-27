@@ -1,7 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "sudoku.h"
-#include "time.h"
+#include "DPLL.h"
 
 Sudoku* inputSudoku()
 {
@@ -23,7 +21,6 @@ Sudoku* createSudoku(int difficult)
     int i,j,t;
     int c,flag=0;
     int x,y;
-    srand(time(NULL));
     Sudoku *s=(Sudoku*)malloc(sizeof(Sudoku));
     Sudoku *ss=NULL;
     s->next=NULL;
@@ -306,6 +303,17 @@ CNF* transformToCNF(Sudoku *s)
             }
         }
     }
+    ClauseList *Cp;
+    while((Cp=locateUnitClause(cnf))!=NULL){
+        boolarrayAssign(cnf,Cp->head->literal,0);
+        simplySingleClause(cnf,Cp->head->literal,NULL);
+    }
+    for(i=1;i<=cnf->literals;i++){
+        if(cnf->boolarray[i]!=NOTSURE){
+            j=cnf->boolarray[i]*i;
+            addClause(cnf,1,&j);
+        }
+    }
     //printClause(cnf);
     return cnf;
 }
@@ -477,17 +485,20 @@ status PrintSudoku(Sudoku *s)
 {
     int i,j;
     printf("´òÓ¡Êý¶À:\n");
+    printf("\t");
     for(j=0;j<19;j++){
         printf("-");
     }
     printf("\n");
     for(i=0;i<9;i++){
+        printf("\t");
         printf("|");
         for(j=0;j<9;j++){
             printf("%d%c",s->sdk[i][j],((j+1)%3==0)?'|':' ');
         }
         printf("\n");
         if((i+1)%3==0){
+            printf("\t");
             printf("|");
             for(j=0;j<17;j++){
                 printf("-");

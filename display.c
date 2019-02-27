@@ -1,34 +1,33 @@
 #include "display.h"
-#include <io.h>
-#include <string.h>
 
-#define DEBUG 1
-
-char path1[]="C:\\Users\\hasee\\Desktop\\程序设计综合课程设计任务及指导学生包\\SAT测试备选算例\\满足算例\\M\\bart17.shuffled-231.cnf";
-//char path1[]="C:\\Users\\hasee\\Desktop\\程序设计综合课程设计任务及指导学生包\\SAT测试备选算例\\不满足算例\\u-problem10-100.cnf";
-//char path1[]="C:\\Users\\hasee\\Desktop\\test.cnf";
+#define DEBUG 0
 
 void CNFPage()
 {
     int dpll=0;
     int i,t;
     int op=1;
+    int solvertype;
+    int file_len;
     char filepath[256]="\0";
     char savepath[256];
     CNF *cnf=NULL;
-    #if DEBUG
-    int firstflag=0;
+
+    status firstflag=FALSE;
     long Handle;
     struct _finddata_t FileInfo;
-    if((Handle=_findfirst("C:\\Users\\hasee\\Desktop\\程序设计综合课程设计任务及指导学生包\\SAT测试备选算例\\满足算例\\M\\*.cnf",&FileInfo))==-1L)
-        printf("没有找到匹配的项目\n");
-    #endif // DEBUG
+
     while(op){
         system("cls");
         printf("\n\n");
         printf("---------------基于SAT的CNF程序菜单-------------\n");
         printf("-----------------------CNF----------------------\n");
         printf("当前加载文件: %s\n",filepath);
+        if(cnf){
+            printf("变元数: %4d\n",cnf->literals);
+            printf("子句数: %4d\n",cnf->clauses);
+            printf("------------------------------------------------\n");
+        }
         printf("1. 加载CNF文件\n");
         printf("2. 求解CNF\n");
         printf("3. 打印CNF\n");
@@ -41,37 +40,61 @@ void CNFPage()
         switch(op)
         {
         case 1:
-            printf("请输入CNF文件路径: ");
-            scanf("%s",filepath);
-            #if DEBUG
-            if(firstflag==0){
-                strcpy(filepath,"C:\\Users\\hasee\\Desktop\\程序设计综合课程设计任务及指导学生包\\SAT测试备选算例\\满足算例\\M\\");
-                strcat(filepath,FileInfo.name);
-                strcpy(filepath,path1);
-                printf("%s\n",filepath);
-            }
-            else
-            {
-                if(_findnext(Handle,&FileInfo)==0){
-                    strcpy(filepath,"C:\\Users\\hasee\\Desktop\\程序设计综合课程设计任务及指导学生包\\SAT测试备选算例\\满足算例\\M\\");
-                    strcat(filepath,FileInfo.name);
-                    printf("%s\n",filepath);
-                }
-                else{
-                    _findclose(Handle);
-                }
-            }
-            firstflag=1;
-            #endif // DEBUG
             if(cnf){
                 destroyCNF(cnf);
                 cnf=NULL;
             }
-            if(!(cnf=loadCnfData(filepath))){
-                printf("文件打开失败！\n");
+
+            if(firstflag==TRUE){
+                char ch;
+                do{
+                    printf("是否选择下一个cnf文件? (Y/N)  ");
+                    scanf("%*c%c", &ch);
+                }while(ch!='Y' && ch!='y' && ch!='N' && ch!='n');
+                if(ch=='N' || ch=='n'){
+                    firstflag = FALSE;
+                    filepath[0] = '\0';
+                }
             }
-            else{
-                printf("文件加载成功!\n");
+            if(firstflag==FALSE){
+                printf("请输入CNF文件(夹)路径: ");
+                scanf("%s",filepath);
+                file_len = strlen(filepath);
+
+                if(strcmp(filepath+file_len-4, ".cnf")==0){
+                    if(!(cnf=loadCnfData(filepath))){
+                        printf("文件打开失败！\n");
+                    }
+                    else{
+                        printf("文件加载成功!\n");
+                    }
+                }
+                else if((Handle=_findfirst(strcat(filepath, "*.cnf"), &FileInfo))==-1L){
+                    printf("没有找到匹配的文件！\n");
+                    filepath[0] = '\0';
+                }
+                else{
+                    firstflag=TRUE;
+                }
+            }
+            else {
+                if(_findnext(Handle, &FileInfo)!=0){
+                    printf("没有找到匹配的文件！\n");
+                    _findclose(Handle);
+                    firstflag = FALSE;
+                    filepath[0] = '\0';
+                }
+            }
+
+            if(firstflag==TRUE){
+                filepath[file_len]='\0';
+                printf("正在加载: %s\n",strcat(filepath, FileInfo.name));
+                if(!(cnf=loadCnfData(filepath))){
+                    printf("文件打开失败！\n");
+                }
+                else{
+                    printf("文件加载成功!\n");
+                }
             }
             getchar();
             getchar();
@@ -81,8 +104,29 @@ void CNFPage()
                 printf("CNF不存在！\n");
             }
             else{
-                t=clock();
-                dpll=DPLLRec(cnf,0);
+                t = -1;
+                clearCnfAnswer(cnf);
+                do{
+                    printf("请输入求解器(1.优化后求解器  2.优化前求解器): ");
+                    scanf("%d", &solvertype);
+                }while(solvertype != 1 && solvertype != 2);
+                if(solvertype==1){
+                    printf("\n正在使用\"优化后求解器\"求解...\n");
+                    createLIndex(cnf);
+                    t=clock();
+                    dpll=DPLLRec(cnf,0);
+                }
+                else{
+                    printf("\n正在使用\"优化前求解器\"求解...\n");
+                    t=clock();
+                    dpll=DPLLRec2(cnf,0);
+                    if(dpll==NOTSURE){
+                        dpll=FALSE;
+                    }
+                    else if(dpll==FALSE){
+                        dpll=NOTSURE;
+                    }
+                }
                 t=clock()-t;
                 if(dpll==TRUE){
                     printf("该CNF成功解出!\n");
@@ -136,7 +180,7 @@ void CNFPage()
             }
             else{
                 printf("正在打印CNF...\n");
-                printfLearnClause(cnf);
+                printLearnClause(cnf);
                 printf("打印完成！\n");
             }
             getchar();
@@ -170,6 +214,8 @@ void sudokuPage()
     int t;
     int dpll;
     int op=1;
+    int solvertype;
+    int difficult = 0;
     char path[256];
     CNF *cnf=NULL;
     Sudoku *s=NULL;
@@ -194,10 +240,15 @@ void sudokuPage()
             }
             else{
                 printf("正在求解...\n");
-                t=clock();
                 cnf=transformToCNF(s);
                 if(cnf){
                     printf("转化CNF成功!\n");
+                    printf("变元数：%4d\n", cnf->literals);
+                    printf("子句数: %4d\n", cnf->clauses);
+                    printf("------------------------------------------------\n");
+                    printf("\n正在使用\"优化后求解器\"求解...\n");
+                    createLIndex(cnf);
+                    t=clock();
                     dpll=DPLLRec(cnf,0);
                     if(dpll==TRUE){
                         t=clock()-t;
@@ -210,8 +261,7 @@ void sudokuPage()
                         while(1){
                             int op;
                             printf("------------------------------------------------\n");
-                            printf("1. 保存CNF及结果(后缀名为cnf)\n");
-                            //printf("2. 保存CNF\n");
+                            printf("1. 保存CNF及结果(后缀名为cnf): ");
                             printf("0. 回退\n");
                             printf("请选择你的操作[0~1]: ");
                             scanf("%d",&op);
@@ -222,27 +272,17 @@ void sudokuPage()
                                     printf("CNF保存成功!\n");
                                     toSavePath(path,path);
                                     if(saveRes(path,dpll,cnf,t)){
-                                        printf("保存成功!\n");
-                                        op=0;
+                                        printf("res保存成功!\n");
+                                        break;
                                     }
                                     else{
-                                        printf("保存失败!\n");
+                                        printf("res保存失败!\n");
                                     }
                                 }
                                 else{
                                     printf("CNF保存失败!\n");
                                 }
                             }
-                            /*else if(op==2){
-                                printf("请输入保存CNF路径: \n");
-                                scanf("%s",path);
-                                if(saveCnf(cnf,path)){
-                                    printf("CNF保存成功!\n");
-                                }
-                                else{
-                                    printf("CNF保存失败!\n");
-                                }
-                            }*/
                             else if(op==0){
                                 break;
                             }
@@ -257,21 +297,35 @@ void sudokuPage()
             getchar();
             break;
         case 2:
-            if(!(s=createSudoku(20))){
+            printf("请输入数独难度[0~25]：");
+            scanf("%d",&difficult);
+            if(!(s=createSudoku(difficult))){
                 printf("数独生成失败！\n");
             }
             else{
                 printf("数独生成成功!\n");
                 PrintSudoku(s);
                 printf("------------------------------------------------\n");
-                getchar();
-                getchar();
-                printf("正在求解...\n");
-                t=clock();
+                do{
+                    printf("请输入求解器(1.优化后求解器  2.优化前求解器): ");
+                    scanf("%d", &solvertype);
+                }while(solvertype != 1 && solvertype != 2);
                 cnf=transformToCNF(s);
                 if(cnf){
                     printf("转化CNF成功!\n");
-                    dpll=DPLLRec(cnf,0);
+                    printf("变元数：%4d\n", cnf->literals);
+                    printf("子句数: %4d\n", cnf->clauses);
+                    printf("------------------------------------------------\n");
+                    t=clock();
+                    if(solvertype==1){
+                        printf("\n正在使用\"优化后求解器\"求解...\n");
+                        createLIndex(cnf);
+                        dpll=DPLLRec(cnf,0);
+                    }
+                    else{
+                        printf("\n正在使用\"优化前求解器\"求解...\n");
+                        dpll=DPLLRec2(cnf,0);
+                    }
                     if(dpll==TRUE){
                         t=clock()-t;
                         printf("该CNF成功解出!\n");
@@ -284,38 +338,27 @@ void sudokuPage()
                             int op;
                             printf("------------------------------------------------\n");
                             printf("1. 保存CNF及结果\n");
-                            //printf("2. 保存CNF\n");
                             printf("0. 回退\n");
                             printf("请选择你的操作[0~1]: ");
                             scanf("%d",&op);
                             if(op==1){
-                                printf("请输入保存路径(后缀名为cnf):\n");
+                                printf("请输入保存路径(后缀名为cnf): ");
                                 scanf("%s",path);
                                 if(saveCnf(cnf,path)){
                                     printf("CNF保存成功!\n");
                                     toSavePath(path,path);
                                     if(saveRes(path,dpll,cnf,t)){
-                                        printf("保存成功!\n");
-                                        op=0;
+                                        printf("res保存成功!\n");
+                                        break;
                                     }
                                     else{
-                                        printf("保存失败!\n");
+                                        printf("res保存失败!\n");
                                     }
                                 }
                                 else{
                                     printf("CNF保存失败!\n");
                                 }
                             }
-                            /*else if(op==2){
-                                printf("请输入保存CNF路径: \n");
-                                scanf("%s",path);
-                                if(saveCnf(cnf,path)){
-                                    printf("CNF保存成功!\n");
-                                }
-                                else{
-                                    printf("CNF保存失败!\n");
-                                }
-                            }*/
                             else if(op==0){
                                 break;
                             }

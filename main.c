@@ -1,9 +1,9 @@
-#include <stdio.h>
 #include "display.h"
 
 int main()
 {
     int op=1;
+    srand(time(NULL));
     while(op){
         system("cls");
         printf("\n\n");

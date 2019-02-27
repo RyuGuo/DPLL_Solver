@@ -1,189 +1,19 @@
 #include "DPLL.h"
+#include <time.h>
 
 #define DEBUG2 0
 
-#define VSIDS 3
-#define VSIDSCOUNT 10
-#define MAXC 8
+#define VSIDS 2
+#define VSIDSCOUNT 100
 #define LEARNLENGTH_MAX 20
+#define OUTTIME 120000
 
+int startTime;
 status reset=FALSE;
+int MAXC = 10;
 
-//boolean DPLLRec(CNF *cnf,const int f)
-//{
-//    /* S为公式对应的子句集。若其满足，返回TURE；否则返回FALSE. */
-//    int l,t=cnf->root->head->literal;
-//    int ret=f;//回溯层数
-//    #if DEBUG2
-//    printf("递归:%d, 选%d\n",f,cnf->root->head->literal);
-//    #endif // DEBUG2
-//
-//    LearnClauseList *lcp;
-//    ClauseList *Cp;
-//    LiteralNode *Lp;
-//    ChangeStack st;
-//    st.floor=f;
-//    st.next=NULL;
-//    while((Cp=locateUnitClause(cnf))!=NULL) {//单子句传播
-//        boolarrayAssign(cnf,Cp->head->literal,f);//记录到数组
-//        simplySingleClause(cnf, Cp->head->literal, &st);//化简单子句并保存修改
-//
-//        #if DEBUG
-//        printClause(cnf);
-//        getchar();
-//        #endif // DEBUG
-//        if(isHaveEmptyClause(cnf)==TRUE){//如果有空子句
-//            #if DEBUG2
-//            //printf("回溯:%d, 选%d\n",f,cnf->root->head->literal);
-//            #endif // DEBUG2
-//            //空子句在置顶
-//
-//            Cp=cnf->root;
-//            reduceChange(cnf, &st,-1, &ret);//还原到初始集
-//            /*如果取值不成立，可能要添加学习子句并非时序回溯...*/
-//
-//            #if DEBUG2
-//            //printClause(cnf);
-//            //getchar();
-//            printf("跳至%d\n",ret);
-//            #endif // DEBUG2
-//
-//            /*LearnClauseList *lcp;
-//            for(lcp=cnf->learn_root;lcp;lcp=lcp->next){
-//                if(lcp->isInStack==FALSE){
-//                    for(Lp=lcp->clause->rmv;Lp && cnf->floorarray[ABS(Lp->literal)]==f;Lp=lcp->clause->rmv){
-//                        backLiteral(lcp->clause,Lp);
-//                    }
-//                    if(Lp==NULL){
-//                        lcp->isInStack=TRUE;
-//                    }
-//                }
-//            }*/
-//            #if DEBUG
-//            printf("回溯isHaveEmptyClause\n");
-//
-//            #endif // DEBUG
-//            //赋值回溯
-//            int j;
-//            for(j=1;j<=cnf->literals;j++){
-//                if(cnf->floorarray[j]==f){
-//                    cnf->boolarray[j]=NOTSURE;
-//                    cnf->floorarray[j]=-1;
-//                }
-//            }
-//            #if DEBUG2
-//            {
-//                printf("回跳1\n");
-//                printf("floor:\n");
-//                int j;
-//                for(j=1;j<=cnf->literals;j++){
-//                    printf("%d:%d ",j,cnf->floorarray[j]*cnf->boolarray[j]);
-//                }
-//                printf("\n");
-//                printfLearnClause(cnf);
-//                //printClause(cnf);
-//                //getchar();
-//            }
-//            #endif // DEBUG2
-//            return ret-f;
-//            return FALSE;
-//        }
-//        else if(isHaveClause(cnf)==FALSE){//如果没有子句
-//            reduceChange(cnf, &st,-1, NULL);//还原到初始集
-//
-//            #if DEBUG
-//            printf("回溯isHaveClause\n");
-//            printClause(cnf);
-//            #endif // DEBUG
-//            return TRUE;
-//        }
-//    }//while
-//    l=combineStrategy(cnf);//综合策略选出变元
-//    /* VSIDS */
-//    //boolarrayAssign(cnf,l);
-//    addClause(cnf,1,&l);
-//    saveChange(&st,SPLIT,cnf->root,NULL);//保存插入操作
-//    int s=DPLLRec(cnf,f+1);
-//    if(s==TRUE){
-//        //PrintChangeStack(&st);
-//        reduceChange(cnf,&st,-1,NULL);
-//        #if DEBUG
-//        printf("回溯l\n");
-//        printClause(cnf);
-//        #endif // DEBUG
-//        return TRUE;
-//    }
-//    //按返回值多层回溯
-//    if(s<FALSE){
-//        reduceChange(cnf,&st,-1,NULL);
-//        //赋值回溯
-//        int j;
-//        for(j=1;j<=cnf->literals;j++){
-//            if(cnf->floorarray[j]==f){
-//                cnf->boolarray[j]=NOTSURE;
-//                cnf->floorarray[j]=-1;
-//            }
-//        }
-///*
-//        LearnClauseList *lcp;
-//        for(lcp=cnf->learn_root;lcp;lcp=lcp->next){
-//            if(lcp->isInStack==FALSE){
-//                for(Lp=lcp->clause->rmv;Lp && cnf->floorarray[ABS(Lp->literal)]==f;Lp=lcp->clause->rmv){
-//                    backLiteral(lcp->clause,Lp);
-//                }
-//                if(Lp==NULL){
-//                    lcp->isInStack=TRUE;
-//                }
-//            }
-//        }*/
-//        #if DEBUG2
-//        {
-//            int j;
-//            printf("正在回跳%d\n",f);
-//            printf("floor:\n");
-//            for(j=1;j<=cnf->literals;j++){
-//                printf("%d:%d ",j,cnf->floorarray[j]*cnf->boolarray[j]);
-//            }
-//            printf("\n");
-//            printfLearnClause(cnf);
-//            //printClause(cnf);
-//            //getchar();
-//        }
-//        #endif // DEBUG2
-//        return s+1;
-//    }
-//    reduceChange(cnf,&st,1,NULL);//撤销插入的操作,bug是LITERAL所指的clause指针在递归时已经被释放，回溯的clause地址不是原先的地址
-//    //printClause(cnf);
-//
-//    l=0-l;//取反
-//    //boolarrayAssign(cnf,l);
-//    addClause(cnf,1,&l);
-//    saveChange(&st,SPLIT,cnf->root,NULL);//保存插入操作
-//
-//
-//
-//    s=DPLLRec(cnf,f+1);
-//    //PrintChangeStack(&st);
-//    reduceChange(cnf,&st,-1,NULL);//还原到初始集
-//
-//    if(s<=FALSE){
-//        //赋值回溯
-//        int j;
-//        for(j=1;j<=cnf->literals;j++){
-//            if(cnf->floorarray[j]==f){
-//                cnf->boolarray[j]=NOTSURE;
-//                cnf->floorarray[j]=-1;
-//            }
-//        }
-//    }
-//    #if DEBUG2
-//    printf("回跳2\n");
-//    printfLearnClause(cnf);
-//    //printf("回溯-l\n");
-//    //printClause(cnf);
-//    #endif // DEBUG
-//    return (s==FALSE || s==TRUE)?s:s+1;
-//}
+enum strategy{mom, vsids, first, occurency, daoshu, weightsat};
+
 boolean DPLLRec(CNF *cnf,const int f)
 {
     /* S为公式对应的子句集。若其满足，返回TURE；否则返回FALSE. */
@@ -194,6 +24,21 @@ boolean DPLLRec(CNF *cnf,const int f)
     ChangeStack st;
     st.floor=f;
     st.next=NULL;
+    //VSIDS对每个文字设立一个计数器。当文字在某个子句中出现，包括原始问题中的子句和学习子句，该文字对应的计数器就加1
+    if(f==0){
+        startTime = clock();
+        LiteralNode *Lp;
+        for(Cp=cnf->root;Cp;Cp=Cp->next){
+            for(Lp=Cp->head;Lp;Lp=Lp->next){
+                if(Lp->literal>0){
+                    cnf->countarray[Lp->literal]++;
+                }
+                else{
+                    cnf->countarray[0-Lp->literal+cnf->literals]+=1;
+                }
+            }
+        }
+    }
     do{
         count++;
         if(reset==TRUE){
@@ -203,6 +48,7 @@ boolean DPLLRec(CNF *cnf,const int f)
             while(lcp){
                 if(lcp->clause->rmv==NULL && lcp->clause->length>LEARNLENGTH_MAX){
                     lcq=lcp->next;
+                    deleteClauseLIndex(cnf, lcp->clause);
                     deleteLearnClause(cnf,lcp);
                     lcp=lcq;
                 }
@@ -218,17 +64,22 @@ boolean DPLLRec(CNF *cnf,const int f)
         #endif // DEBUG2
         while((Cp=locateUnitClause(cnf))!=NULL) {//单子句传播
             boolarrayAssign(cnf,Cp->head->literal,f);//记录到数组
-            simplySingleClause(cnf, Cp->head->literal, &st);//化简单子句并保存修改
+            simplifySingleClause_2(cnf, Cp, &st);//化简单子句并保存修改
             if(isHaveEmptyClause(cnf)==TRUE){//如果有空子句
+                if(clock()-startTime>=OUTTIME){
+                    printf("超时 >%dms\n",OUTTIME);
+                    return -1-f;
+                }
                 #if DEBUG2
                 //printf("化简后\n");
                 //printClause(cnf);
                 #endif // DEBUG2
                 //空子句在置顶
-                int *a=(int*)malloc(sizeof(int)*cnf->literals);
+                int *a=(int*)malloc(sizeof(int)*(cnf->literals+3));
                 reduceChange(cnf, &st,-1, a);//还原到初始集
                 /*如果取值不成立，可能要添加学习子句并非时序回溯...*/
-                ret=createLearnClause(cnf,a+1,a[0],a[a[0]+1]);
+                //ret=createLearnClause(cnf,a+1,a[0],a[a[0]+1]);
+                ret=a[0];
                 free(a);
                 backLearnClause(cnf,f);
                 //deleteRepeatLearnClause(cnf, cnf->learn_root);
@@ -242,6 +93,7 @@ boolean DPLLRec(CNF *cnf,const int f)
                 //赋值回溯
                 backAssign(cnf,f);
                 if(count>MAXC){
+                    //MAXC++;
                     printf("重启动...\n");
                     reset=TRUE;
                     //学习子句的回溯
@@ -270,11 +122,14 @@ boolean DPLLRec(CNF *cnf,const int f)
                 return TRUE;
             }
         }//while
-        l=combineStrategy(cnf);//综合策略选出变元
         /* VSIDS */
+        l=combineStrategy(cnf,weightsat);//综合策略选出变元
+
         addClause(cnf,1,&l);
         saveChange(&st,SPLIT,cnf->root,NULL);//保存插入操作
+
         printf("递归:%d, 选%d\n",f,l);
+
         s=DPLLRec(cnf,f+1);
         reduceChange(cnf,&st,1,NULL);
     }while(s==FALSE);
@@ -308,18 +163,26 @@ boolean DPLLRec(CNF *cnf,const int f)
         return s+1;
     }
 }
-boolean DPLLRec2(CNF *cnf)
+boolean DPLLRec2(CNF *cnf, const int f)
 {
     /* S为公式对应的子句集。若其满足，返回TURE；否则返回FALSE. */
     int l;
     ClauseList *Cp;
     ChangeStack st;
     st.next=NULL;
+    if(f==0){
+        startTime=clock();
+    }
     while((Cp=locateUnitClause(cnf))!=NULL) {//单子句传播
-        boolarrayAssign(cnf,Cp->head->literal,-1);//记录到数组
+        boolarrayAssign(cnf,Cp->head->literal,f);//记录到数组
         simplySingleClause(cnf, Cp->head->literal, &st);//化简单子句
         if(isHaveEmptyClause(cnf)==TRUE){//如果有空子句
             reduceChange(cnf,&st,-1,NULL);
+            backAssign(cnf,f);
+            if(clock()-startTime>=OUTTIME){
+                printf("超时 >%dms\n",OUTTIME);
+                return NOTSURE;
+            }
             return FALSE;
         }
         else if(isHaveClause(cnf)==FALSE){//如果没有子句
@@ -328,22 +191,30 @@ boolean DPLLRec2(CNF *cnf)
         }
 
     }//while
-    l=combineStrategy(cnf);//综合策略选出变元
-    boolarrayAssign(cnf,l,-1);//记录到数组
+    l=combineStrategy(cnf,mom);//综合策略选出变元
+    boolarrayAssign(cnf,l,f);//记录到数组
     addClause(cnf,1,&l);//添加到子句集中
     saveChange(&st,SPLIT,cnf->root,NULL);
-    int s=DPLLRec2(cnf);//递归
+    int s=DPLLRec2(cnf, f+1);//递归
     if(s==TRUE){//如果是真
         reduceChange(cnf,&st,-1,NULL);
         return TRUE;
     }
+    if(s==NOTSURE){
+        reduceChange(cnf,&st,-1,NULL);
+        backAssign(cnf,f);
+        return NOTSURE;
+    }
     reduceChange(cnf,&st,1,NULL);
     l=-l;//取假值
-    boolarrayAssign(cnf,l,-1);//记录到数组
+    boolarrayAssign(cnf,l,f);//记录到数组
     addClause(cnf,1,&l);//添加到子句集中
     saveChange(&st,SPLIT,cnf->root,NULL);
-    s=DPLLRec2(cnf);//递归
+    s=DPLLRec2(cnf, f+1);//递归
     reduceChange(cnf,&st,-1,NULL);
+    if(s==FALSE){
+        backAssign(cnf,f);
+    }
     return s;
 }
 boolean DPLLUnRec();//非递归
@@ -358,18 +229,21 @@ status simplySingleClause(CNF *cnf, int literal, ChangeStack *head)
         {
         case TRUE:
             removeClause(cnf, Cp);
-            saveChange(head,CLAUSE,Cp,NULL);
+            if(head){
+                saveChange(head,CLAUSE,Cp,NULL);
+            }
             Cp=Cp->next;
             //printClause(cnf);
             break;
         case NOTSURE:
             Lp=removeLiteral(Cp,-literal);
-            saveChange(head,LITERAL,Cp,Lp);
+            if(head){
+                saveChange(head,LITERAL,Cp,Lp);
+            }
             //如果为空语句,把空语句置顶返回
             //如果为单语句,置顶
-            //如果为双语句,置顶
-            //上述不需要
-            /*if(Cp->length<=2){
+
+            if(Cp->length<=1){
                 Cq=Cp->next;
                 removeClause(cnf,Cp);
                 insertClauseTop(cnf,Cp);
@@ -382,9 +256,7 @@ status simplySingleClause(CNF *cnf, int literal, ChangeStack *head)
             }
             else{
                 Cp=Cp->next;
-            }*/
-            Cp=Cp->next;
-            //Lp->next=NULL;
+            }
             //printClause(cnf);
             break;
         default:
@@ -394,7 +266,86 @@ status simplySingleClause(CNF *cnf, int literal, ChangeStack *head)
     }
     return OK;
 }
-status simplifyClause();//化简子句
+status simplifySingleClause_2(CNF *cnf, ClauseList *Cp, ChangeStack *head)
+{
+    int literal = Cp->head->literal;
+    int index = ABS(literal);
+
+    LiteralIndex *li;
+    ClauseList *CCp;
+    LiteralNode *Lp;
+    //由于插入的单子句没有加入索引，必须另外删除
+    removeClause(cnf, Cp);
+    saveChange(head,CLAUSE,Cp,NULL);
+    for(li=cnf->lindex[index].next;li;li=li->next){
+        CCp=li->Cp;
+        Lp=li->Lp;
+        if(CCp->isremoved==FALSE){
+            if(Lp->literal == literal){
+                removeClause(cnf, CCp);
+                if(head){
+                    saveChange(head,CLAUSE,CCp,NULL);
+                }
+            }
+            else if(Lp->literal == -literal){
+                Lp = removeLiteral(CCp,-literal);
+                if(head){
+                    saveChange(head,LITERAL,CCp,Lp);
+                }
+                //如果为空语句,把空语句置顶返回
+                //如果为单语句,置顶
+
+                if(CCp->length<=1){
+                    removeClause(cnf,CCp);
+                    insertClauseTop(cnf,CCp);
+                    if(Cp->length==0){
+                        return ERROR;
+                    }
+                }
+            }
+
+
+
+
+               /*
+            switch(evaluateClause(CCp,literal))
+            {
+            case TRUE:
+                removeClause(cnf, CCp);
+                if(head){
+                    saveChange(head,CLAUSE,CCp,NULL);
+                }
+                //printClause(cnf);
+                break;
+            case NOTSURE:
+                Lp = removeLiteral(CCp,-literal);
+                if(head){
+                    saveChange(head,LITERAL,CCp,Lp);
+                }
+                //如果为空语句,把空语句置顶返回
+                //如果为单语句,置顶
+
+                if(CCp->length<=1){
+                    removeClause(cnf,CCp);
+                    insertClauseTop(cnf,CCp);
+                    if(Cp->length==0){
+                        return ERROR;
+                    }
+                }
+                //printClause(cnf);
+                break;
+            default:
+                break;
+            }*/
+        }
+    }
+/*
+    printf("化简后：\n");
+    printClause(cnf);
+    getchar();
+    getchar();*/
+    return OK;
+}
 int chooseStrategy_MaxOccurrence(CNF *cnf)
 {
     int i;
@@ -466,51 +417,168 @@ int chooseStrategy_MaxOccurrenceTwoLiteral(CNF *cnf)
     free(visitedminus);
     return index;
 }
+int MOMStrategy(CNF *cnf)
+{
+    int i;
+    double max=-1;
+    int index=0;
+    ClauseList *Cp;
+    LiteralNode *Lp;
+    double *J=(double*)malloc(sizeof(double)*(cnf->literals+1));
+    for(i=1;i<=cnf->literals;i++){
+        J[i]=0;
+    }
+    for(Cp=cnf->root;Cp;Cp=Cp->next){
+        for(Lp=Cp->head;Lp;Lp=Lp->next){
+            J[ABS(Lp->literal)]+=pow(2,0-Cp->length);
+        }
+    }
+    for(i=1;i<=cnf->literals;i++){
+        if(max<J[i] && cnf->boolarray[i]==NOTSURE){
+            max=J[i];
+            index = i;
+        }
+    }
+    int zheng=0,fu=0;
+    for(Cp=cnf->root;Cp;Cp=Cp->next){
+        for(Lp=Cp->head;Lp;Lp=Lp->next){
+            if(Lp->literal>0){
+                zheng++;
+            }
+            else{
+                fu++;
+            }
+        }
+    }
+    if(zheng<fu){
+        index=-index;
+    }
+    free(J);
+    return index;
+}
 int VSIDSStrategy(CNF *cnf)
 {
     int i;
     static int count=0;
-    int max=0;
+    int max=-1;
     int index=0;
-    ClauseList *Cp;
-    LiteralNode *Lp;
-    for(Cp=cnf->root;Cp;Cp=Cp->next){
-        //在化简单子句时已经把length<=2的子句全部置顶了,但是在第一次递归时可能并没有
-        for(Lp=Cp->head;Lp;Lp=Lp->next){
-            if(Lp->literal>0){
-                cnf->countarray[Lp->literal]++;
-            }
-            else{
-                cnf->countarray[-Lp->literal]++;
-            }
-        }
-    }
     for(i=1;i<=cnf->literals;i++){
-        if(max<cnf->countarray[i] && cnf->boolarray[i]==NOTSURE){
-            max=cnf->countarray[i];
+        if(max<cnf->countarray[i]+cnf->countarray[i+cnf->literals] && cnf->boolarray[i]==NOTSURE){
+            max=cnf->countarray[i]+cnf->countarray[i+cnf->literals];
             index = i;
         }
     }
     count++;
     if(count>VSIDSCOUNT){
         count=0;
-        for(i=1;i<=cnf->literals;i++){
+        for(i=1;i<=cnf->literals*2;i++){
             cnf->countarray[i]/=VSIDS;
         }
     }
-    index=(count%2)?index:-index;
+    index=(cnf->countarray[index]>cnf->countarray[index+cnf->literals])?index:-index;
     return index;
 }
-int combineStrategy(CNF *cnf)
+int daoStrategy(CNF *cnf)
 {
-    /*int index=0;
-    index=chooseStrategy_MaxOccurrenceTwoLiteral(cnf);
-    if(index!=0){
-        return index;
+    int i;
+    double max=-1;
+    int index=0;
+    ClauseList *Cp;
+    LiteralNode *Lp;
+    double *J=(double*)malloc(sizeof(double)*(cnf->literals+1));
+    for(i=1;i<=cnf->literals;i++){
+        J[i]=0;
     }
-    return chooseStrategy_MaxOccurrence(cnf);*/
-    return VSIDSStrategy(cnf);
-    return cnf->root->head->literal;
+    for(Cp=cnf->root;Cp;Cp=Cp->next){
+        for(Lp=Cp->head;Lp;Lp=Lp->next){
+            J[ABS(Lp->literal)]+=1.0/Cp->length;
+        }
+    }
+    for(i=1;i<=cnf->literals;i++){
+        if(max<J[i] && cnf->boolarray[i]==NOTSURE){
+            max=J[i];
+            index = i;
+        }
+    }
+    int zheng=0,fu=0;
+    for(Cp=cnf->root;Cp;Cp=Cp->next){
+        for(Lp=Cp->head;Lp;Lp=Lp->next){
+            if(Lp->literal>0){
+                zheng++;
+            }
+            else{
+                fu++;
+            }
+        }
+    }
+    if(zheng<fu){
+        index=-index;
+    }
+    free(J);
+    return index;
+}
+int weightStrategy(CNF *cnf)
+{
+    int i;
+    int index=0;
+    ClauseList *Cp;
+    int W=0;
+
+    Cp=cnf->root;
+    int ran = rand()%(cnf->clauses);
+    for(i=1;i<ran;i++){
+        Cp=Cp->next;
+    }
+    Cp->weight++;
+
+    i=0;
+    while(W==0 && i<=cnf->literals){
+        i++;
+        for(;i<=cnf->literals && cnf->boolarray[i]!=NOTSURE;i++){
+            ;
+        }
+        for(Cp=cnf->root;Cp;Cp=Cp->next){
+            if(evaluateClause(Cp, i)!=TRUE){
+                W-=Cp->weight;
+            }
+            if(evaluateClause(Cp, -i)!=TRUE){
+                W+=Cp->weight;
+            }
+        }
+        if(W>0){
+            index = i;
+        }
+        else if(W<0){
+            index = -i;
+        }
+    }
+    return index;
+}
+int combineStrategy(CNF *cnf, enum strategy s)
+{
+    int index=0;
+    switch(s)
+    {
+    case mom:
+        index = MOMStrategy(cnf);
+        break;
+    case vsids:
+        index = VSIDSStrategy(cnf);
+        break;
+    case first:
+        index = cnf->root->head->literal;
+        break;
+    case occurency:
+        index = chooseStrategy_MaxOccurrence(cnf);
+        break;
+    case daoshu:
+        index = daoStrategy(cnf);
+        break;
+    case weightsat:
+        index = weightStrategy(cnf);
+        break;
+    }
+    return index;
 }
 status saveChange(ChangeStack *head, int tag, ClauseList* Cp, LiteralNode *Lp)
 {
@@ -566,7 +634,8 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
     //6.插入学习子句Cl => a[]得到最后蕴含关系
     int i=1,j;
     int toF=head->floor;
-    status *a=NULL;
+    status *G=NULL;
+    status *Gvisited=NULL;
     LiteralNode *Lp;
     ChangeStack *Sp=head->next;
     status flag=FALSE;
@@ -586,11 +655,16 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
                 //将冲突的变元加入a[]_0
                 if(Sp->Cp->length==1){
                     flag=TRUE;
-                    a=(status*)malloc(sizeof(status)*cnf->literals+1);
+                    G=(status*)malloc(sizeof(status)*(cnf->literals+2));
+                    Gvisited = (status*)malloc(sizeof(status)*(cnf->literals+1));
+                    for(j=1;j<=cnf->literals;j++){
+                        Gvisited[j]=FALSE;
+                    }
                     learnarray[i]=Sp->Cp->head->literal;
                     i++;
                     learnarray[i]=0-Sp->Cp->head->literal;
                     i++;
+                    Gvisited[ABS(Sp->Cp->head->literal)]=TRUE;
                     #if DEBUG2
                     printf("冲突：Cp=%p,l=%d\n",Sp->Cp,a[0]);
                     #endif // DEBUG2
@@ -608,6 +682,52 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
 
             if(Sp->Cp->length==1){
                 //是否元素在a[]_0内（元素的值取反后与a[]_0比较）
+                //监视哨learnarray[i]=0-Sp->Cp->head->literal
+
+                learnarray[i]=0-Sp->Cp->head->literal;
+                for(j=1;Sp->Cp->head->literal!=-learnarray[j];j++){
+                    ;
+                }
+                if(j!=i){
+                    //访问该顶点
+                    G[j]=TRUE;
+                    int t=j;
+                    //是否全部访问过
+                    for(j=2;j<i;j++){
+                        if(G[j]!=TRUE){
+                            break;
+                        }
+                    }
+                    if(j==i && i!=3 && isLearn==FALSE){
+                        isLearn=TRUE;
+
+                        learnarray[0]=i-1;
+                        learnarray[i]=-learnarray[t];
+                        int f=createLearnClause(cnf,learnarray+1,learnarray[0],-learnarray[t]);
+                        if(f<toF){
+                            toF=f;
+                        }
+                    }
+                    else{
+                        //printf("子句%p, %d: ",Sp->Cp,Sp->Cp->head->literal);
+                        for(Lp=Sp->Cp->rmv;Lp;Lp=Lp->next){
+
+                            //printf("%d ",Lp->literal);
+                            //删去重复的变元
+                            if(Gvisited[ABS(Lp->literal)]==FALSE){
+                                learnarray[i]=Lp->literal;
+                                G[i]=FALSE;
+                                Gvisited[ABS(Lp->literal)] = TRUE;
+                                if(cnf->floorarray[ABS(learnarray[i])]<head->floor){
+                                    G[i]=TRUE;
+                                }
+                                i++;
+                            }
+                        }
+                    }
+                }
+
+/*
                 for(j=1;j<i;j++){
                     if(Sp->Cp->head->literal==-learnarray[j]){
                         break;
@@ -616,18 +736,23 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
                 //该子句C的DIVIDE后的所有变元都加入a[]_0
                 if(i!=j){
                     //访问该顶点
-                    a[j]=TRUE;
+                    G[j]=TRUE;
                     int t=j;
                     //是否全部访问过
                     for(j=2;j<i;j++){
-                        if(a[j]!=TRUE){
+                        if(G[j]!=TRUE){
                             break;
                         }
                     }
                     if(j==i && i!=3 && isLearn==FALSE){
                         isLearn=TRUE;
+
                         learnarray[0]=i-1;
                         learnarray[i]=-learnarray[t];
+                        int f=createLearnClause(cnf,learnarray+1,learnarray[0],-learnarray[t]);
+                        if(f<toF){
+                            toF=f;
+                        }
                     }
                     else{
 
@@ -644,16 +769,16 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
                             }
                             if(j==i){
                                 learnarray[i]=Lp->literal;
-                                a[i]=FALSE;
+                                G[i]=FALSE;
                                 if(cnf->floorarray[ABS(learnarray[i])]<head->floor){
-                                    a[i]=TRUE;
+                                    G[i]=TRUE;
                                 }
                                 i++;
                             }
                         }
                     }
+                }*/
                     //printf("\n");
-                }
                 //如果是过长的学习子句，那么先加入a[]，再删除（不可行,因为会产生短的但是隐含前提错误的子句）
             }
         }
@@ -663,17 +788,20 @@ status reduceChange(CNF *cnf, ChangeStack *head, int time, int *learnarray)
         Sp=head->next;
     }
     if(learnarray){
-        free(a);
+        free(G);
+        free(Gvisited);
+        learnarray[0]=toF;
     }
     return OK;
 }
 int createLearnClause(CNF *cnf, int *a, int i, int X)
 {
     int j,l;
-    int *copy=(int*)malloc(sizeof(int)*i);
-    for(j=0;j<i;j++){
+    //int *copy=(int*)malloc(sizeof(int)*i);
+    int *copy = a;
+    /*for(j=0;j<i;j++){
         copy[j]=a[j];
-    }
+    }*/
     int F=0,toF=0;
 
     /*printf("学习前a=");
@@ -695,7 +823,7 @@ int createLearnClause(CNF *cnf, int *a, int i, int X)
     }
     //3.将所有撤销完成后，得到a[]_1，删去a[]_1中本层所有的变量赋值（决策以及推倒出）的变元，得到a[]_2
     for(l=0,j=0;j<i;j++){
-        if(cnf->floorarray[ABS(copy[j])]!=F && cnf->floorarray[ABS(copy[j])]!=-1){
+        if(cnf->floorarray[ABS(copy[j])]!=F){
             copy[l]=copy[j];
             l++;
         }
@@ -708,16 +836,14 @@ int createLearnClause(CNF *cnf, int *a, int i, int X)
     }
     // **如果学习子句长度过长，只生成决策单子句，在回溯的时候将其删除
     int L=l+1;//长学习子句的原长
-    /*if(L>LEARNLENGTH_MAX){
-        l=0;
-    }*/
 
     //排序变元，使得变元决策层为降序
     //插入排序
+    int tmp;
     for(i=1;i<l;i++){
         for(j=i-1;j>=0;j--){
             if(cnf->floorarray[ABS(copy[j+1])]>cnf->floorarray[ABS(copy[j])]){
-                int tmp=copy[j+1];
+                tmp=copy[j+1];
                 copy[j+1]=copy[j];
                 copy[j]=tmp;
             }
@@ -727,7 +853,7 @@ int createLearnClause(CNF *cnf, int *a, int i, int X)
     copy[l]=-X;
     l++;
     for(j=l-1;j>0;j--){
-        int tmp=copy[j-1];
+        tmp=copy[j-1];
         copy[j-1]=copy[j];
         copy[j]=tmp;
     }
@@ -742,6 +868,19 @@ int createLearnClause(CNF *cnf, int *a, int i, int X)
     lcp->countNum=L;
     lcp->next=cnf->learn_root;
     cnf->learn_root=lcp;
+
+    /* VSIDS */
+    for(i=0;i<L;i++){
+        if(copy[i]>0){
+            cnf->countarray[copy[i]]++;
+        }
+        else{
+            cnf->countarray[-copy[i]+cnf->literals]++;
+        }
+    }
+
+    addLIndex(cnf,lcp->clause);
+
     //学习子句的变元有赋值
     while(cnf->root->head){
         removeLiteral(cnf->root,cnf->root->head->literal);
@@ -753,7 +892,7 @@ int createLearnClause(CNF *cnf, int *a, int i, int X)
     }
     printf("L=%d\n",L);
 */
-    free(copy);
+    //free(copy);
     return toF;
 }
 status backLearnClause(CNF *cnf, int floor)
@@ -768,7 +907,7 @@ status backLearnClause(CNF *cnf, int floor)
             if(Lp==NULL){
                 //printf("删前\n");
                 //printfLearnClause(cnf);
-
+/*
                 if(lcp->clause->length>LEARNLENGTH_MAX){
                     if(lcq==NULL){
                         cnf->learn_root=lcp->next;
@@ -785,7 +924,7 @@ status backLearnClause(CNF *cnf, int floor)
                     }
 
                 }
-                else
+                else*/
                     lcp->isInStack=TRUE;
                 //printf("删后\n");
                 //printfLearnClause(cnf);

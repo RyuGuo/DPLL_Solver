@@ -8,15 +8,10 @@ status createCNF(CNF *cnf, int literals, int clauses)
     cnf->learn_root=NULL;
     cnf->boolarray = (boolean*)malloc((cnf->literals+1)*sizeof(boolean));
     cnf->floorarray = (int*)malloc((cnf->literals+1)*sizeof(int));
-    cnf->countarray = (int*)malloc((cnf->literals+1)*sizeof(int));
-    cnf->floorarray[0]=-1;
+    cnf->countarray = (int*)malloc((cnf->literals*2+1)*sizeof(int));
+    cnf->lindex = NULL;
     if(cnf->boolarray && cnf->floorarray){
-        int i;
-        for(i=1;i<=cnf->literals;i++){
-            cnf->boolarray[i]=NOTSURE;
-            cnf->floorarray[i]=-1;
-            cnf->countarray[i]=0;
-        }
+        clearCnfAnswer(cnf);
         return OK;
     }
     else {
@@ -29,20 +24,32 @@ status destroyCNF(CNF *cnf)
         return ERROR;
     }
     deleteAllClause(cnf);
+    deleteALLIndex(cnf);
     free(cnf->boolarray);
     free(cnf->floorarray);
     free(cnf->countarray);
+    free(cnf->lindex);
     free(cnf);
+    return OK;
+}
+status clearCnfAnswer(CNF *cnf)
+{
+    LearnClauseList *Lcp=cnf->learn_root;
+    while(Lcp){
+        deleteLearnClause(cnf,Lcp);
+        Lcp=cnf->learn_root;
+    }
+    int i;
+    for(i=0;i<=cnf->literals;i++){
+        cnf->boolarray[i]=NOTSURE;
+        cnf->floorarray[i]=-1;
+        cnf->countarray[i]=cnf->countarray[i+cnf->literals]=0;
+    }
     return OK;
 }
 status addClause(CNF *cnf, int n, int *clause)
 {
     int i;
-//    for(i=0;i<n;i++){
-//        printf("c=%d,i=%d,j=%d,x=%d\n",clause[i],(ABS(clause[i]))/81,(ABS(clause[i]-1)/9)%9,(ABS(clause[i])-1)%9+1);
-//    }
-//    printf("\n");
-//    getchar();
     ClauseList *newClause = (ClauseList*)malloc(sizeof(ClauseList));
     if(!newClause || n<=0){
         return ERROR;
@@ -50,6 +57,8 @@ status addClause(CNF *cnf, int n, int *clause)
     newClause->head=NULL;
     newClause->rmv=NULL;
     newClause->length=0;
+    newClause->weight = 1;
+    newClause->isremoved = FALSE;
     for(i=0;i<n;i++){
         if(!addLiteral(newClause, clause[i])){
             return ERROR;
@@ -63,6 +72,44 @@ status addClause(CNF *cnf, int n, int *clause)
 
     cnf->root = newClause;
     cnf->clauses++;
+
+    return OK;
+}
+status createLIndex(CNF *cnf)
+{
+    if(cnf->clauses==0 || cnf->literals==0){
+        return FALSE;
+    }
+    if(cnf->lindex!=NULL){
+        deleteALLIndex(cnf);
+    }
+    else{
+        cnf->lindex = (LiteralIndex*)malloc((cnf->literals+1)*sizeof(LiteralIndex));
+    }
+    int i;
+    ClauseList *Cp;
+    for(i=1;i<=cnf->literals;i++){
+        cnf->lindex[i].next=NULL;
+    }
+    for(Cp=cnf->root;Cp;Cp=Cp->next){
+        addLIndex(cnf,Cp);
+    }
+    return OK;
+}
+status addLIndex(CNF *cnf, ClauseList *Cp)
+{
+    if(cnf->lindex==NULL){
+        return FALSE;
+    }
+    LiteralNode *Lp;
+    LiteralIndex *li;
+    for(Lp=Cp->head;Lp;Lp=Lp->next){
+        li = (LiteralIndex*)malloc(sizeof(LiteralIndex));
+        li->Lp = Lp;
+        li->Cp = Cp;
+        li->next = cnf->lindex[ABS(Lp->literal)].next;
+        cnf->lindex[ABS(Lp->literal)].next = li;
+    }
     return OK;
 }
 status insertClauseTop(CNF *cnf, ClauseList *Cp)
@@ -70,6 +117,7 @@ status insertClauseTop(CNF *cnf, ClauseList *Cp)
     if(cnf->root){
         cnf->root->prev=Cp;
     }
+    Cp->isremoved = FALSE;
     Cp->next = cnf->root;
     Cp->prev = NULL;
     cnf->root = Cp;
@@ -88,6 +136,7 @@ ClauseList* removeClause(CNF *cnf, ClauseList *Cp)
     else{
         cnf->root=Cp->next;
     }
+    Cp->isremoved = TRUE;
     cnf->clauses--;
     return Cp;
 }
@@ -218,6 +267,56 @@ status deleteLiteral(ClauseList *Cp, int literal)
     }
     return ERROR;
 }
+status deleteClauseLIndex(CNF *cnf, ClauseList *Cp)
+{
+    /*static int flag=0;
+    if(flag==1){
+        printLearnClause(cnf);
+        printLIndex(cnf);
+    }
+    if(cnf->learn_root->clause->length==69 && cnf->learn_root->floor==68){
+        printLearnClause(cnf);
+        printLIndex(cnf);
+        flag=1;
+    }*/
+
+
+    LiteralNode *Lp;
+    LiteralIndex *li;
+    LiteralIndex *tmp;
+    for(Lp=Cp->head;Lp;Lp=Lp->next){
+        for(li=&(cnf->lindex[ABS(Lp->literal)]);li->next->Cp!=Cp;li=li->next){
+            ;
+        }
+        tmp=li->next;
+        li->next = tmp->next;
+        free(tmp);
+    }
+    for(Lp=Cp->rmv;Lp;Lp=Lp->next){
+        for(li=&(cnf->lindex[ABS(Lp->literal)]);li->next->Cp!=Cp;li=li->next){
+            ;
+        }
+        tmp=li->next;
+        li->next = tmp->next;
+        free(tmp);
+    }
+    return OK;
+}
+status deleteALLIndex(CNF *cnf)
+{
+    int i;
+    if(cnf->lindex==NULL){
+        return OK;
+    }
+    for(i=1;i<=cnf->literals;i++){
+        while(cnf->lindex[i].next){
+            LiteralIndex * li = cnf->lindex[i].next;
+            cnf->lindex[i].next = li->next;
+            free(li);
+        }
+    }
+    return OK;
+}
 status boolarrayAssign(CNF *cnf, int literal,int f)
 {
     cnf->boolarray[ABS(literal)]=EVALUE(literal);//记录到数组
@@ -265,7 +364,7 @@ status printClause(CNF *cnf)
     }
     return OK;
 }
-status printfLearnClause(CNF *cnf)
+status printLearnClause(CNF *cnf)
 {
     printf("------------------------------------------------\n");
     printf("learn clause:\n");
@@ -284,6 +383,20 @@ status printfLearnClause(CNF *cnf)
             for(Lp=Cp->rmv;Lp;Lp=Lp->next){
                 printf("%d ",Lp->literal);
             }
+        }
+        printf("\n");
+    }
+    return OK;
+}
+status printLIndex(CNF *cnf)
+{
+    int i;
+    LiteralIndex *li;
+    printf("变元索引：\n");
+    for(i=1;i<=cnf->literals;i++){
+        printf("%d: ",i);
+        for(li=cnf->lindex[i].next;li;li=li->next){
+            printf("%p ",li->Cp);
         }
         printf("\n");
     }
