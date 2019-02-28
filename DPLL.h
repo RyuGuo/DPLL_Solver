@@ -8,13 +8,18 @@
 #define LITERAL 1
 #define SPLIT 2
 
-typedef struct ChangeStack{
+typedef struct ChangeStack {
     int tag;
     int floor;
     LiteralNode *Lp;
-    ClauseList *Cp;//
+    ClauseList *Cp;
     struct ChangeStack *next;
-}ChangeStack;
+} ChangeStack;
+
+typedef struct Floor {
+    int a;
+    int floor;
+} Floor;
 
 boolean DPLLRec();//递归
 boolean DPLLRec2();//递归2
@@ -27,7 +32,6 @@ int chooseStrategy_MaxOccurrence();//策略_出现次数最多
 int chooseStrategy_MaxOccurrenceTwoLiteral();//选取出现在只有2个变元的子句中次数最多的变元
 int MOMStrategy(CNF *cnf);
 int VSIDSStrategy(CNF *cnf);
-int daoStrategy(CNF *cnf);
 int combineStrategy();//综合策略
 status saveChange();//保存化简时的修改
 status reduceChange();//恢复修改
@@ -37,5 +41,7 @@ int createLearnClause(CNF *cnf, int *a, int i, int X);//生成学习子句
 status backLearnClause(CNF *cnf, int floor);//学习子句的回溯
 status deleteRepeatLearnClause();//删去重复的学习子句
 status backAssign(CNF *cnf, int floor);////赋值回溯
+
+int compare_Des(const void *a,const void *b);
 
 #endif // DPLL_H_INCLUDED

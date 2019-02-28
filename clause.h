@@ -27,7 +27,7 @@ typedef struct CNF {
     struct LiteralIndex *lindex;
     struct ClauseList *root;//指向第一个子句
     struct LearnClauseList *learn_root;//指向第一个学习子句
-}CNF;
+} CNF;
 
 typedef struct ClauseList {
     status isremoved;//子句是否被移出子句集
@@ -37,7 +37,7 @@ typedef struct ClauseList {
     struct LiteralNode *rmv;//指向第一个被移除的变元
     struct ClauseList *prev;//指向上一个子句
     struct ClauseList *next;//指向下一个子句
-}ClauseList;
+} ClauseList;
 
 typedef struct LearnClauseList {
     boolean isInStack;//是否在回溯栈中
@@ -45,18 +45,18 @@ typedef struct LearnClauseList {
     int countNum;//调用次数
     struct ClauseList *clause;//指向学习子句
     struct LearnClauseList *next;//指向下一个学习子句
-}LearnClauseList;
+} LearnClauseList;
 
 typedef struct LiteralNode {
     int literal;//变元，正为正，负为非
     struct LiteralNode *next;//指向下一个变元
-}LiteralNode;
+} LiteralNode;
 
 typedef struct LiteralIndex {
     LiteralNode *Lp;//指向与下标一致的变元
     ClauseList *Cp;//指向变元出现的子句
     struct LiteralIndex *next;//下一个变元
-}LiteralIndex;
+} LiteralIndex;
 
 status createCNF();//CNF创建
 status destroyCNF();//CNF销毁

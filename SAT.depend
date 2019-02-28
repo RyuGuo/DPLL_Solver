@@ -2,7 +2,7 @@
 1551150190 source:c:\users\hasee\desktop\sat\cnffile.c
 	"cnfFile.h"
 
-1551257479 c:\users\hasee\desktop\sat\clause.h
+1551320519 c:\users\hasee\desktop\sat\clause.h
 	<stdio.h>
 	<stdlib.h>
 
@@ -12,22 +12,22 @@
 1548830885 c:\users\hasee\desktop\sat\cnffile.h
 	"clause.h"
 
-1551257501 source:c:\users\hasee\desktop\sat\clause.c
+1551317170 source:c:\users\hasee\desktop\sat\clause.c
 	"clause.h"
 
-1551259238 source:c:\users\hasee\desktop\sat\dpll.c
+1551319756 source:c:\users\hasee\desktop\sat\dpll.c
 	"DPLL.h"
 	<time.h>
 
-1551258890 c:\users\hasee\desktop\sat\dpll.h
+1551320519 c:\users\hasee\desktop\sat\dpll.h
 	"clause.h"
 	<math.h>
 
-1551254052 source:c:\users\hasee\desktop\sat\sudoku.c
+1551317021 source:c:\users\hasee\desktop\sat\sudoku.c
 	"sudoku.h"
 	"DPLL.h"
 
-1548830908 c:\users\hasee\desktop\sat\sudoku.h
+1551320519 c:\users\hasee\desktop\sat\sudoku.h
 	"clause.h"
 
 1551093072 c:\users\hasee\desktop\sat\display.h
@@ -40,6 +40,6 @@
 	<io.h>
 	<string.h>
 
-1551254257 source:c:\users\hasee\desktop\sat\display.c
+1551316913 source:c:\users\hasee\desktop\sat\display.c
 	"display.h"
 

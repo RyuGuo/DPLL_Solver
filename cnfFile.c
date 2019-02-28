@@ -8,34 +8,34 @@ CNF* loadCnfData(char *path)
     int literals,clauses;
     FILE *fp;
     fp=fopen(path,"r");
-    if(!fp){
+    if(!fp) {
         return NULL;
     }
     CNF *cnf=(CNF*)malloc(sizeof(CNF));
-    if(!cnf){
+    if(!cnf) {
         return NULL;
     }
-    while((ch=fgetc(fp))=='c'){
-        while((ch=fgetc(fp))!='\n'){
+    while((ch=fgetc(fp))=='c') {
+        while((ch=fgetc(fp))!='\n') {
             ;
         }
     }
-    for(i=0;i<5;i++){
+    for(i=0; i<5; i++) {
         ch=fgetc(fp);
     }
     fscanf(fp,"%d",&literals);
     fscanf(fp,"%d",&clauses);
-    if(!createCNF(cnf,literals,0)){
+    if(!createCNF(cnf,literals,0)) {
         fclose(fp);
         return ERROR;
     }
-    for(i=0;i<clauses;i++){
+    for(i=0; i<clauses; i++) {
         j=0;
-        do{
+        do {
             fscanf(fp,"%d",&l[j]);
             j++;
-        }while(l[j-1]!=0);
-        if(!addClause(cnf,j-1,l)){
+        } while(l[j-1]!=0);
+        if(!addClause(cnf,j-1,l)) {
             fclose(fp);
             return NULL;
         }
@@ -44,12 +44,12 @@ CNF* loadCnfData(char *path)
     return cnf;
 }
 status toSavePath(char *respath, char *cnfpath)
-{
+ {
     int i=-1;
-    do{
+    do {
         i++;
         respath[i]=cnfpath[i];
-    }while(cnfpath[i]!='\0');
+    } while(cnfpath[i]!='\0');
     i-=3;
     respath[i++]='r';
     respath[i++]='e';
@@ -60,12 +60,12 @@ status saveRes(char *respath, status DPLL, CNF *cnf, int time)
 {
     int i;
     FILE *fp=fopen(respath,"w");
-    if(!fp){
+    if(!fp) {
         return ERROR;
     }
     fprintf(fp,"s %d\n",DPLL);
     fprintf(fp,"v");
-    for(i=1;i<=cnf->literals;i++){
+    for(i=1; i<=cnf->literals; i++) {
         fprintf(fp," %d",cnf->boolarray[i]*i);
     }
     fprintf(fp,"\nt %d",time);
@@ -77,12 +77,12 @@ status saveCnf(CNF* cnf, char *path)
     FILE *fp=fopen(path,"w");
     ClauseList *Cp;
     LiteralNode *Lp;
-    if(!fp){
+    if(!fp) {
         return ERROR;
     }
     fprintf(fp,"p cnf %d %d\n",cnf->literals,cnf->clauses);
-    for(Cp=cnf->root;Cp;Cp=Cp->next){
-        for(Lp=Cp->head;Lp;Lp=Lp->next){
+    for(Cp=cnf->root; Cp; Cp=Cp->next) {
+        for(Lp=Cp->head; Lp; Lp=Lp->next) {
             fprintf(fp,"%d ",Lp->literal);
         }
         fprintf(fp,"0\n");
